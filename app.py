@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import ast  # ใช้สำหรับแปลง string เป็น dictionary
 
 # ตั้งค่าหน้าตาของเว็บ (ต้องเป็นคำสั่งแรกสุด)
 st.set_page_config(page_title="แนะนำเมนูอาหารเย็น", page_icon="🍽️", layout="wide")
@@ -12,6 +13,18 @@ def load_data():
     return df
 
 df = load_data()
+
+# ฟังก์ชันแปลงที่อยู่จาก JSON string เป็นข้อความที่อ่านง่าย
+def format_address(address):
+    try:
+        address_dict = ast.literal_eval(address)  # แปลง string เป็น dictionary
+        street = address_dict.get("street", "")
+        sub_district = address_dict.get("subDistrict", {}).get("name", "")
+        district = address_dict.get("district", {}).get("name", "")
+        city = address_dict.get("city", {}).get("name", "")
+        return f"{street}, ตำบล{sub_district}, อำเภอ{district}, {city}"
+    except (ValueError, SyntaxError):
+        return "ไม่พบข้อมูลที่อยู่"
 
 # ส่วนติดต่อผู้ใช้
 st.title("🍽️ แนะนำเมนูอาหารเย็นตามงบประมาณ")
@@ -31,13 +44,10 @@ if not filtered_df.empty:
         with st.container():
             st.markdown(f"### 🍜 {row['name']}")
             st.markdown(f"**ประเภทอาหาร:** {row['cuisine']}")
-
-            # ตรวจสอบว่า address เป็น NaN หรือ None หรือไม่
-            address = row.get('address')
-            if isinstance(address, str) and address != "NaN" and address.strip():  # ตรวจสอบว่าเป็นสตริงและไม่ว่างเปล่า
-                st.markdown(f"📍 **ที่อยู่:** {address}")
-            else:
-                st.markdown("📍 **ที่อยู่:** ไม่พบข้อมูลที่อยู่")
+            
+            # แปลงที่อยู่ให้อยู่ในรูปแบบที่อ่านง่าย
+            formatted_address = format_address(row['address'])
+            st.markdown(f"📍 **ที่อยู่:** {formatted_address}")
 
             st.markdown("---")
 else:
@@ -48,5 +58,3 @@ st.sidebar.markdown("## ℹ️ วิธีใช้งาน")
 st.sidebar.write("1️⃣ เลือกช่วงราคาที่ต้องการ 💰")
 st.sidebar.write("2️⃣ ดูรายการร้านอาหารที่แนะนำ 🍽️")
 st.sidebar.write("3️⃣ เพลิดเพลินกับอาหารมื้อเย็นของคุณ! 😋")
-
-#run -streamlit run app.py
